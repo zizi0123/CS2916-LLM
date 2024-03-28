@@ -55,6 +55,7 @@ class LlamaEmbeddingClassifier(torch.nn.Module):
 		'''
 		# todo
 		_, hidden_states = self.llama(input_ids)
+		hidden_states = hidden_states[:, -1, :] #we only need the hidden state after the final token of the input sequence
 		self.dropout(hidden_states)
 		logits = self.classifier_head(hidden_states) #通过分类头将hidden state映射到类别的logits上
 		log_probabilities = F.log_softmax(logits, dim=-1)
