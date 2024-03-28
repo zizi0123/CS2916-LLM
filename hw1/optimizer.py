@@ -1,6 +1,7 @@
 from typing import Callable, Iterable, Tuple
 
 import torch
+import math
 from torch.optim import Optimizer
 
 
@@ -45,15 +46,23 @@ class AdamW(Optimizer):
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
 
+                # state initialization
+                if len(state) == 0:
+                    state["step"] = 0
+                    state["mt"] = torch.zeros_like(p.data)
+                    state["vt"] = torch.zeros_like(p.data)
+
+                state["step"] += 1
+
                 # Update first and second moments of the gradients
-                mt = self.betas[0] * mt + (1 - self.betas[0]) * grad
-                vt = self.betas[1] * vt + (1 - self.betas[1]) * grad**2
+                state["mt"] = group["betas"][0] * state["mt"] + (1 - group["betas"][0]) * grad
+                state["vt"] = group["betas"][1] * state["vt"] + (1 - group["betas"][1]) * grad**2
                 # Bias correction
-                alpha_t = alpha * (torch.sqrt(1 - self.betas[1]**t) / (1 - self.betas[0]**t))
+                alpha_t = alpha * (math.sqrt(1 - group["betas"][1]**state["step"]) / (1 - group["betas"][0]**state["step"]))
                 # Please note that we are using the "efficient version" given in
                 # https://arxiv.org/abs/1412.6980
                 # Update parameters
-                p.data = p.data - alpha_t * mt / (torch.sqrt(vt) + self.eps)
+                p.data = p.data - alpha_t * state["mt"] / (torch.sqrt(state["vt"]) + group["eps"])
                 # Add weight decay after the main gradient-based updates.
                 # Please note that the learning rate should be incorporated into this update.
 
